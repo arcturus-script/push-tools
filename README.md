@@ -49,3 +49,25 @@ robot = WorkWechatRobot(key="xxx")
 
 robot.send("hello world.", msgtype="markdown", title="## test")
 ```
+
+```python
+from push import PushComposite, Pushplus, Qmsg
+
+pushplus = Pushplus(key="xxx")
+qmsg = Qmsg(key="xxx")
+
+p = PushComposite()
+
+p.add("pushplus", pushplus)
+p.add("qmsg", qmsg)
+
+p.send("hello world. ╰(*°▽°*)╯", title="test")
+```
+
+```python
+from push import PushSender
+
+p = PushSender("qmsg", "21301137366cbdbabfc91e505cccb81e")
+
+p.send("hello world")
+```
