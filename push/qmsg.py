@@ -14,7 +14,7 @@ class Qmsg(Push):
         super().__init__(key)
 
     @catchException
-    def send(self, msg: str) -> None:
+    def send(self, msg: str, **kwargs) -> None:
         params = {"msg": msg}
 
         res = re.get(f"{self.url}/{self.key}", params=params).json()
