@@ -1,3 +1,3 @@
 from push import Pushplus, Qmsg, Server, WorkWechatApp, WorkWechatRobot
-from tools import dict2html, dict2text, dict2md
+from tools import Dict2html, Dict2text, Dict2md
 from utils import PushComposite, PushSender
