@@ -1,5 +1,5 @@
-from tools import parse
-from push import (
+from .tools import parse
+from .push import (
     Pushplus,
     Qmsg,
     Server,
