@@ -67,6 +67,7 @@ p.send("hello world. ╰(*°▽°*)╯", title="test")
 ```python
 from push import PushSender
 
+# 目前支持 pushplus, server, qmsg, workWechatRobot, workWechat
 p = PushSender("qmsg", "21301137366cbdbabfc91e505cccb81e")
 
 p.send("hello world")
