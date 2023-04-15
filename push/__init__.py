@@ -20,10 +20,10 @@ class PushComposite:
 
 
 class PushSender:
-    def __init__(self, type: str, key: str | dict) -> None:
+    def __init__(self, type: str, key) -> None:
         self.push = self.create(type, key)
 
-    def create(self, type: str, key: str | dict):
+    def create(self, type: str, key):
         if type == "pushplus":
             return Pushplus(key)
         elif type == "server":
