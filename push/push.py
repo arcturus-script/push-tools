@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 
 class Push(ABC):
-    def __init__(self, key: str | dict) -> None:
+    def __init__(self, key) -> None:
         super().__init__()
 
         self.key = key
