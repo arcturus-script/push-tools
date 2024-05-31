@@ -1,6 +1,7 @@
 from .pushplus import Pushplus
 from .qmsg import Qmsg
 from .server import Server
+from .telegram import Telegram
 from .wechat import WorkWechatApp, WorkWechatRobot
 
 
@@ -34,6 +35,8 @@ class PushSender:
             return WorkWechatRobot(key)
         elif type == "workWechat":
             return WorkWechatApp(key)
+        elif type == "telegram":
+            return Telegram(key)
 
     def send(self, msg: str, **kwargs):
         self.push.send(msg, **kwargs)
