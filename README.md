@@ -51,6 +51,19 @@ robot.send("hello world.", msgtype="markdown", title="## test")
 ```
 
 ```python
+from push import Telegram
+
+key = {
+    "token": "xxx",
+    "chat_id": "xxx",
+}
+
+telegram = Telegram(key=key)
+
+telegram.send("hello world.")
+```
+
+```python
 from push import PushComposite, Pushplus, Qmsg
 
 pushplus = Pushplus(key="xxx")
@@ -67,7 +80,7 @@ p.send("hello world. ╰(*°▽°*)╯", title="test")
 ```python
 from push import PushSender
 
-# 目前支持 pushplus, server, qmsg, workWechatRobot, workWechat
+# 目前支持 pushplus, server, qmsg, workWechatRobot, workWechat, telegram
 p = PushSender("qmsg", "21301137366cbdbabfc91e505cccb81e")
 
 p.send("hello world")
