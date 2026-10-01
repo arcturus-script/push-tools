@@ -1,0 +1,21 @@
+[project]
+name = "push-tools"
+version = "0.0.1"
+description = "A tool supports push message."
+authors = [
+    {name = "ARCTURUS",email = "ice99125@qq.com"},
+]
+dependencies = [
+    "setuptools",
+    "requests",
+]
+requires-python = ">=3.9"
+readme = "README.md"
+license = {text = "MIT Licence"}
+keywords = ["qmsg", "pushplus", "server", "wechat"]
+
+
+[project.urls]
+Homepage = "https://github.com/arcturus-script/push-tools"
+[tool.pdm]
+distribution = true
