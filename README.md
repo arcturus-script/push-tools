@@ -384,9 +384,9 @@ WorkWechat(token, *, timeout=None)
 
 | 方法 | 说明 | 约束 |
 |---|---|---|
-| `send(message, **opts)` | 发 text/markdown；以 `#` 开头自动 markdown，也可显式 `msgtype="markdown"` | ≤2048 UTF-8 字节 |
-| `send_text(content, **opts)` | 文本（支持 `\n` 与 `<a>`） | ≤2048 字节 |
-| `send_markdown(content, **opts)` | Markdown | ≤2048 字节 |
+| `send(message, **opts)` | 发 text/markdown；以 `#` 开头自动 markdown，也可显式 `msgtype="markdown"` | 服务端限额 2048 UTF-8 字节，**超长自动截断** |
+| `send_text(content, **opts)` | 文本（支持 `\n` 与 `<a>`） | 超长自动截断至 2048 字节 |
+| `send_markdown(content, **opts)` | Markdown | 超长自动截断至 2048 字节 |
 | `send_textcard(title, description, url, btntxt=None, **opts)` | 文本卡片 | title 必填；`btntxt` ≤4 字；`url` 需带 http(s) |
 | `send_news(articles, **opts)` | 图文消息，1–8 条 | 每篇需 `title` 且需 `url` 或 `appid`(+`pagepath`)，可选 `description`/`picurl` |
 | `send_media(media_id, msgtype="image", *, title=None, description=None, **opts)` | image/voice/video/file | `msgtype` ∈ `image/voice/video/file`；video 可用 `title`/`description` |
@@ -394,6 +394,8 @@ WorkWechat(token, *, timeout=None)
 | `upload_media(media_type, file)` | 上传临时素材，返回 `media_id`（3 天有效） | image ≤10MB、voice(AMR) ≤2MB、video(MP4) ≤10MB、file ≤20MB；`file` 为路径或二进制文件对象 |
 | `get_access_token()` | 取/刷新 access token | 一般无需手动调用 |
 | `raw_send(body)` | 直接发送完整信封 | 用于 mpnews、miniprogram_notice、卡片回调等未封装类型 |
+
+> **超长内容处理**：`send` / `send_text` / `send_markdown` 的正文超过 2048 UTF-8 字节时不再报错，而是按 UTF-8 字符边界截断尾部，在消息末尾追加提示 `...[truncated: content exceeded 2048 UTF-8 bytes]`，同时通过 `push_tools` logger 输出一条 WARNING（含原始字节数与截断后字节数）。截断后保证不超过 2048 字节，多字节字符（如中文）不会被切坏。
 
 ```python
 from push_tools import WorkWechat

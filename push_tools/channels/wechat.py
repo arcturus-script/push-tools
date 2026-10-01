@@ -29,6 +29,8 @@ from __future__ import annotations
 
 import base64
 import hashlib
+
+import logging
 import os
 import time
 from typing import Any, Optional
@@ -38,6 +40,8 @@ import requests
 from ..base import PushChannel
 from ..errors import AccessFailed, catch_exception
 from ..registry import register_channel
+
+logger = logging.getLogger("push_tools")
 
 # Refresh the cached access token this many seconds before its real expiry to
 # absorb clock skew between the local machine and the WeCom servers.
@@ -87,6 +91,45 @@ def _utf8_size(text: str) -> int:
     """Return the UTF-8 encoded byte length of ``text``."""
 
     return len(text.encode("utf-8"))
+
+
+# Notice appended to the tail of truncated content; keeps its own byte
+# length so the final body always fits within the server-side limit.
+_TRUNCATION_NOTICE = "\n...[truncated: content exceeded %d UTF-8 bytes]"
+
+
+def _truncate_utf8(text: str, limit: int, label: str) -> str:
+    """Truncate ``text`` to at most ``limit`` UTF-8 bytes, with a notice.
+
+    WeCom rejects application text/markdown content longer than ``limit``
+    UTF-8 bytes. Instead of dropping the whole push, the tail is cut on a
+    clean UTF-8 character boundary, an in-body truncation notice is
+    appended, and a warning recording both the original and final byte
+    sizes is emitted. Content that already fits is returned untouched.
+
+    Example:
+        >>> _truncate_utf8("abcdefg", 6, "message")   # doctest: +SKIP
+    """
+
+    original_size = _utf8_size(text)
+    if original_size <= limit:
+        return text
+
+    suffix = _TRUNCATION_NOTICE % limit
+    budget = max(0, limit - _utf8_size(suffix))
+    # errors="ignore" discards the dangling bytes of any multi-byte
+    # character the slice happens to cut, so the result never contains a
+    # partial character.
+    kept = text.encode("utf-8")[:budget].decode("utf-8", errors="ignore").rstrip()
+    truncated = kept + suffix
+    logger.warning(
+        "[workWechat] %s was %d UTF-8 bytes (limit %d); truncated to %d bytes before sending",
+        label,
+        original_size,
+        limit,
+        _utf8_size(truncated),
+    )
+    return truncated
 
 
 def _read_source(source: Any) -> "tuple[Optional[str], bytes]":
@@ -243,6 +286,10 @@ class WorkWechat(PushChannel):
         start the message with a leading ``#`` to send Markdown (the
         application Markdown subset is documented at path/90236).
 
+        Content longer than the 2048 UTF-8 byte server limit is truncated on
+        a character boundary (an in-body notice is appended and a warning is
+        logged) instead of failing the send.
+
         Example:
             >>> pusher.send("hello", agentid=1000002, touser="zhangsan")
             ...                                              # doctest: +SKIP
@@ -250,8 +297,7 @@ class WorkWechat(PushChannel):
 
         if not isinstance(message, str) or not message.strip():
             raise ValueError("message must be a non-empty string")
-        if _utf8_size(message) > _APP_CONTENT_MAX_BYTES:
-            raise ValueError(f"message is {_utf8_size(message)} UTF-8 bytes long but the " f"WeCom application limit is {_APP_CONTENT_MAX_BYTES} bytes")
+        message = _truncate_utf8(message, _APP_CONTENT_MAX_BYTES, "message")
 
         msgtype = options.pop("msgtype", None) or ("markdown" if message.lstrip().startswith("#") else "text")
         if msgtype not in ("text", "markdown"):
@@ -266,6 +312,9 @@ class WorkWechat(PushChannel):
     def send_text(self, content, **options):
         """Send a ``text`` message (content supports ``\\n`` and ``<a>``).
 
+        Content longer than 2048 UTF-8 bytes is truncated with an in-body
+        notice instead of failing the send.
+
         Example:
             >>> pusher.send_text("hello <a href=\\"https://a.com\\">x</a>",
             ...                  agentid=1, safe=1)   # doctest: +SKIP
@@ -273,12 +322,15 @@ class WorkWechat(PushChannel):
 
         if not isinstance(content, str) or not content.strip():
             raise ValueError("content must be a non-empty string")
-        self._ensure_within_bytes(content, _APP_CONTENT_MAX_BYTES, "text content")
+        content = _truncate_utf8(content, _APP_CONTENT_MAX_BYTES, "text content")
         return self._dispatch("text", {"content": content}, **options)
 
     @catch_exception
     def send_markdown(self, content, **options):
-        """Send a ``markdown`` message (<= 2048 UTF-8 bytes).
+        """Send a ``markdown`` message (server limit: 2048 UTF-8 bytes).
+
+        Longer content is truncated with an in-body notice instead of
+        failing the send.
 
         Example:
             >>> pusher.send_markdown("# title\\nhello", agentid=1)
@@ -287,7 +339,7 @@ class WorkWechat(PushChannel):
 
         if not isinstance(content, str) or not content.strip():
             raise ValueError("content must be a non-empty string")
-        self._ensure_within_bytes(content, _APP_CONTENT_MAX_BYTES, "markdown content")
+        content = _truncate_utf8(content, _APP_CONTENT_MAX_BYTES, "markdown content")
         return self._dispatch("markdown", {"content": content}, **options)
 
     @catch_exception
@@ -474,14 +526,6 @@ class WorkWechat(PushChannel):
                 raise ValueError("duplicate_check_interval must be between 0 and 14400 seconds")
             envelope["duplicate_check_interval"] = interval
         return envelope
-
-    @staticmethod
-    def _ensure_within_bytes(content, limit, label):
-        """Raise ValueError when ``content`` exceeds ``limit`` UTF-8 bytes."""
-
-        size = _utf8_size(content)
-        if size > limit:
-            raise ValueError(f"{label} is {size} UTF-8 bytes long but the WeCom limit is {limit} bytes")
 
     @catch_exception
     def raw_send(self, body):

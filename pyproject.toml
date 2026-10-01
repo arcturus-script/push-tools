@@ -1,6 +1,6 @@
 [project]
 name = "push-tools"
-version = "0.1.1"
+version = "0.1.2"
 description = "A tool supports push message."
 authors = [
     {name = "ARCTURUS",email = "ice99125@qq.com"},

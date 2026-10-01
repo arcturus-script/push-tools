@@ -453,11 +453,33 @@ def example_wechat_contract() -> None:
         assert envelope["duplicate_check_interval"] == 600
         assert "title" not in envelope and "qq" not in envelope
 
+        # Overlong content is truncated with an in-body notice instead of
+        # being rejected; every posted body stays within the 2048-byte limit
+        # and multi-byte characters are never cut in the middle.
+        overlong = app.send("x" * 2049, agentid=7)
+        assert overlong is not None
+        sent_text = calls[-1]["json"]["text"]["content"]
+        assert len(sent_text.encode("utf-8")) <= 2048
+        assert sent_text.startswith("x" * 100) and "[truncated" in sent_text
+
+        overlong_md = app.send("# " + "z" * 2047, agentid=7)
+        assert overlong_md is not None
+        sent_md = calls[-1]["json"]["markdown"]["content"]
+        assert len(sent_md.encode("utf-8")) <= 2048
+        assert sent_md.startswith("# ") and "[truncated" in sent_md
+
+        wide = app.send("中" * 2048, agentid=7)  # 6144 UTF-8 bytes
+        assert wide is not None
+        sent_wide = calls[-1]["json"]["text"]["content"]
+        assert len(sent_wide.encode("utf-8")) <= 2048
+
+        typed = app.send_text("q" * 3000, agentid=7)
+        assert typed is not None
+        assert len(calls[-1]["json"]["text"]["content"].encode("utf-8")) <= 2048
+
         # Validation failures are caught by the decorator (None, no POST).
         assert app.send("hi") is None  # missing agentid
         assert app.send("hi", agentid=7, duplicate_check_interval=99999) is None
-        assert app.send("x" * 2049, agentid=7) is None  # > 2048 UTF-8 bytes
-        assert app.send("# " + "z" * 2047, agentid=7) is None
         assert app.send("   ", agentid=7) is None
         assert app.send("hi", agentid=7, msgtype="image") is None
 
