@@ -253,7 +253,7 @@ class WorkWechat(PushChannel):
         if _utf8_size(message) > _APP_CONTENT_MAX_BYTES:
             raise ValueError(f"message is {_utf8_size(message)} UTF-8 bytes long but the " f"WeCom application limit is {_APP_CONTENT_MAX_BYTES} bytes")
 
-        msgtype = options.get("msgtype") or ("markdown" if message.lstrip().startswith("#") else "text")
+        msgtype = options.pop("msgtype", None) or ("markdown" if message.lstrip().startswith("#") else "text")
         if msgtype not in ("text", "markdown"):
             raise ValueError("send() only supports msgtype 'text'/'markdown'; use send_textcard(), " "send_news(), send_media(), send_template_card() or raw_send() instead")
 
